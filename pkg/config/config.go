@@ -18,6 +18,7 @@ type ServerConfig struct {
 type ExecutorConfig struct {
 	IsolateCommand string
 	IsolateBoxPath string
+	CompileDir     string
 }
 
 type NATSConfig struct {
@@ -37,6 +38,7 @@ func LoadConfig(filename string) (*Config, error) {
 	viper.SetDefault("executor.isolateBoxPath", "/var/local/lib/isolate")
 	viper.SetDefault("nats.url", "nats://localhost:4222")
 	viper.SetDefault("grpc.port", 50051)
+	viper.SetDefault("executor.compileDir", "/tmp")
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {

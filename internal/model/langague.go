@@ -9,24 +9,24 @@ type Language struct {
 	BinaryFileExt  *string `yaml:"binary_file" json:"binaryFileExt"`
 	CompileCommand *string `yaml:"compile_command" json:"compileCommand"`
 	RunCommand     *string `yaml:"run_command" json:"runCommand"`
-	SourceFileName *string `yaml:"-" json:"-"`
-	BinaryFileName *string `yaml:"-" json:"-"`
+	sourceFileName *string `yaml:"-" json:"-"`
+	binaryFileName *string `yaml:"-" json:"-"`
 }
 
 func (l *Language) GetSourceFileName() string {
-	if l.SourceFileName != nil {
-		return *l.SourceFileName
+	if l.sourceFileName != nil {
+		return *l.sourceFileName
 	}
 	newFileName := uuid.NewString() + *l.SourceFileExt
-	l.SourceFileName = &newFileName
+	l.sourceFileName = &newFileName
 	return newFileName
 }
 
 func (l *Language) GetBinaryFileName() string {
-	if l.BinaryFileName != nil {
-		return *l.BinaryFileName
+	if l.binaryFileName != nil {
+		return *l.binaryFileName
 	}
 	newFileName := uuid.NewString() + *l.BinaryFileExt
-	l.BinaryFileName = &newFileName
+	l.binaryFileName = &newFileName
 	return newFileName
 }

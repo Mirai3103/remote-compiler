@@ -3,21 +3,24 @@ package grpc
 import (
 	"github.com/Mirai3103/remote-compiler/internal/executor"
 	"github.com/Mirai3103/remote-compiler/internal/model"
+	"github.com/Mirai3103/remote-compiler/pkg/config"
 	"github.com/Mirai3103/remote-compiler/pkg/logger"
 	"github.com/Mirai3103/remote-compiler/proto"
 )
 
 type ExecutionHandler struct {
 	proto.UnimplementedExecutionServiceServer
+	cfx *config.Config
 }
 
-func NewExecutionHandler() *ExecutionHandler {
-	return &ExecutionHandler{}
+func NewExecutionHandler(cfx *config.Config) *ExecutionHandler {
+	return &ExecutionHandler{
+		cfx: cfx,
+	}
 }
 
 func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.ExecutionService_ExecuteServer) error {
 	log := logger.GetLogger()
-
 	submission := &model.Submission{
 		ID:          &req.Id,
 		Language:    convertLanguage(req.Language),
@@ -26,7 +29,7 @@ func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.Execution
 		MemoryLimit: int(req.MemoryLimit),
 		TestCases:   convertTestCases(req.TestCases),
 	}
-	var ex = executor.NewExecutor(log)
+	var ex = executor.NewExecutor(log, h.cfx.Executor)
 	err := ex.Compile(submission)
 	if err != nil {
 		for _, testCase := range submission.TestCases {
@@ -37,17 +40,25 @@ func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.Execution
 				Stderr:       err.Error(),
 			})
 		}
-		return nil
+		ch := make(chan *model.SubmissionResult)
+		go ex.Execute(submission, ch)
+		for result := range ch {
+			stream.Send(&proto.SubmissionResult{
+				SubmissionId: *result.SubmissionID,
+				TestCaseId:   *result.TestCaseID,
+			})
+		}
+	} else {
+		errStr := err.Error()
+		for _, testCase := range submission.TestCases {
+			stream.Send(&proto.SubmissionResult{
+				SubmissionId: *submission.ID,
+				TestCaseId:   *testCase.ID,
+				Status:       "Compile Error",
+				Stderr:       errStr,
+			})
+		}
 	}
-	ch := make(chan *model.SubmissionResult)
-	go ex.Execute(submission, ch)
-	for result := range ch {
-		stream.Send(&proto.SubmissionResult{
-			SubmissionId: *result.SubmissionID,
-			TestCaseId:   *result.TestCaseID,
-		})
-	}
-
 	return nil
 }
 

@@ -27,7 +27,7 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer()
-	executionHandler := grpcIpml.NewExecutionHandler()
+	executionHandler := grpcIpml.NewExecutionHandler(cfg)
 	proto.RegisterExecutionServiceServer(grpcServer, executionHandler)
 	reflection.Register(grpcServer)
 	log.Info("Starting gRPC server", zap.Int("port", cfg.GRPC.Port))

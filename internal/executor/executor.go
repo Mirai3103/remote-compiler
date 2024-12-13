@@ -2,12 +2,16 @@ package executor
 
 import (
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"os"
+	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/Mirai3103/remote-compiler/internal/model"
+	"github.com/Mirai3103/remote-compiler/pkg/config"
 	"go.uber.org/zap"
 )
 
@@ -18,6 +22,7 @@ type Executor interface {
 
 type executor struct {
 	logger *zap.Logger
+	cfx    config.ExecutorConfig
 }
 
 func (e *executor) run(command string) (*string, error) {
@@ -67,8 +72,21 @@ func (e *executor) Compile(sb *model.Submission) error {
 	}
 	language := sb.Language
 	code := sb.Code
-	sourceFilename := language.GetSourceFileName()
+	sourceFilename := e.cfx.CompileDir + "/" + language.GetSourceFileName()
+	binaryFilename := e.cfx.CompileDir + "/" + language.GetBinaryFileName()
 	err := os.WriteFile(sourceFilename, []byte(*code), 0644)
+	if err != nil {
+		return err
+	}
+
+	command := strings.ReplaceAll(*language.CompileCommand, "$SourceFileName", sourceFilename)
+	command = strings.ReplaceAll(command, "$BinaryFileName", binaryFilename)
+
+	execCmd := exec.Command("sh", "-c", command)
+	log.Printf("Running command: %s", command)
+	execCmd.Dir = e.cfx.CompileDir
+	err = execCmd.Run()
+	execCmd.Wait()
 	if err != nil {
 		return err
 	}
@@ -77,8 +95,12 @@ func (e *executor) Compile(sb *model.Submission) error {
 
 }
 
-func NewExecutor(logger *zap.Logger) Executor {
+func NewExecutor(logger *zap.Logger, cfx config.ExecutorConfig) Executor {
+	if _, err := os.Stat(cfx.CompileDir); os.IsNotExist(err) {
+		os.MkdirAll(cfx.CompileDir, 0755)
+	}
 	return &executor{
 		logger: logger,
+		cfx:    cfx,
 	}
 }
