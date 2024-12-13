@@ -1,4 +1,4 @@
-package internal
+package model
 
 import "github.com/google/uuid"
 
@@ -13,13 +13,19 @@ type Language struct {
 	BinaryFileName *string `yaml:"-" json:"-"`
 }
 
-func (l *Language) GenerateSourceFileName() string {
+func (l *Language) GetSourceFileName() string {
+	if l.SourceFileName != nil {
+		return *l.SourceFileName
+	}
 	newFileName := uuid.NewString() + *l.SourceFileExt
 	l.SourceFileName = &newFileName
 	return newFileName
 }
 
-func (l *Language) GenerateBinaryFileName() string {
+func (l *Language) GetBinaryFileName() string {
+	if l.BinaryFileName != nil {
+		return *l.BinaryFileName
+	}
 	newFileName := uuid.NewString() + *l.BinaryFileExt
 	l.BinaryFileName = &newFileName
 	return newFileName

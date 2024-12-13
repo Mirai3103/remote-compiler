@@ -1,4 +1,4 @@
-package internal
+package model
 
 type SubmissionResult struct {
 	SubmissionID *string `json:"submissionId"`

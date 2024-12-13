@@ -1,0 +1,42 @@
+[
+  {
+    "version": "g++ 12.2.0",
+    "name": "C++",
+    "sourceFileExt": ".cpp",
+    "binaryFileExt": ".out",
+    "compileCommand": "g++ $SourceFileName -o $BinaryFileName",
+    "runCommand": "$BinaryFileName"
+  },
+  {
+    "version": "gcc 12.2.0",
+    "name": "C",
+    "sourceFileExt": ".c",
+    "binaryFileExt": ".out",
+    "compileCommand": "gcc $SourceFileName -o $BinaryFileName",
+    "runCommand": "$BinaryFileName"
+  },
+  {
+    "version": "Python 3.11.2",
+    "name": "Python3",
+    "sourceFileExt": ".py",
+    "binaryFileExt": null,
+    "compileCommand": null,
+    "runCommand": "python3 $SourceFileName"
+  },
+  {
+    "version": "Go 1.23.4",
+    "name": "Go",
+    "sourceFileExt": ".go",
+    "binaryFileExt": ".out",
+    "compileCommand": "go build -o $BinaryFileName $SourceFileName",
+    "runCommand": "$BinaryFileName"
+  },
+  {
+    "version": "Node.js 16.13.0",
+    "name": "Node.js",
+    "sourceFileExt": ".js",
+    "binaryFileExt": null,
+    "compileCommand": null,
+    "runCommand": "node $SourceFileName"
+  }
+]

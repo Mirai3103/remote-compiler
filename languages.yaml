@@ -1,0 +1,30 @@
+- version: g++ 12.2.0
+  name: C++
+  source_file: .cpp
+  binary_file: .out
+  compile_command: g++ $SourceFileName -o $BinaryFileName
+  run_command: $BinaryFileName
+- version: gcc 12.2.0
+  name: C
+  source_file: .c
+  binary_file: .out
+  compile_command: gcc $SourceFileName -o $BinaryFileName
+  run_command: $BinaryFileName
+- version: Python 3.11.2
+  name: Python3
+  source_file: .py
+  binary_file: null
+  compile_command: null
+  run_command: python3 $SourceFileName
+- version: Go 1.23.4
+  name: Go
+  source_file: .go
+  binary_file: .out
+  compile_command: go build -o $BinaryFileName $SourceFileName
+  run_command: $BinaryFileName
+- version: Node.js 16.13.0
+  name: Node.js
+  source_file: .js
+  binary_file: null
+  compile_command: null
+  run_command: node $SourceFileName
