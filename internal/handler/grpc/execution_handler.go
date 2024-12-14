@@ -21,6 +21,7 @@ func NewExecutionHandler(cfx *config.Config) *ExecutionHandler {
 
 func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.ExecutionService_ExecuteServer) error {
 	log := logger.GetLogger()
+	log.Info("Received a submission")
 	submission := &model.Submission{
 		ID:          &req.Id,
 		Language:    convertLanguage(req.Language),
@@ -31,7 +32,7 @@ func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.Execution
 	}
 	var ex = executor.NewExecutor(log, h.cfx.Executor)
 	err := ex.Compile(submission)
-	if err != nil {
+	if err == nil {
 		for _, testCase := range submission.TestCases {
 			stream.Send(&proto.SubmissionResult{
 				SubmissionId: *submission.ID,

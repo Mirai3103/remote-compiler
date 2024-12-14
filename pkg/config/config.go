@@ -18,7 +18,6 @@ type ServerConfig struct {
 type ExecutorConfig struct {
 	IsolateCommand string
 	IsolateBoxPath string
-	CompileDir     string
 }
 
 type NATSConfig struct {

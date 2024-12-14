@@ -1,8 +1,8 @@
 package executor
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -21,8 +21,15 @@ type Executor interface {
 }
 
 type executor struct {
-	logger *zap.Logger
-	cfx    config.ExecutorConfig
+	logger      *zap.Logger
+	cfx         config.ExecutorConfig
+	isolatePath string
+}
+
+func (e *executor) initIsolate() {
+	execCmd := exec.Command("isolate", "--init")
+	execCmd.Run()
+	e.isolatePath = "/var/local/lib/isolate/0"
 }
 
 func (e *executor) run(command string) (*string, error) {
@@ -38,25 +45,41 @@ func (e *executor) run(command string) (*string, error) {
 	return nil, nil
 }
 
+// isolate --cg -t $timeLimit -x 1 -w ($timeLimit + 4) -k 64000 -p 5 --cg-mem=128000 -f 5120 -E PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" -d /etc:noexec --run -- $RunCommand
 // Execute implements Executor.
 func (e *executor) Execute(submission *model.Submission, ch chan<- *model.SubmissionResult) error {
 	testcase := submission.TestCases
+	command := strings.ReplaceAll(*submission.Language.RunCommand, "$BinaryFileName", e.isolatePath+"/"+submission.Language.GetBinaryFileName())
+	command = strings.ReplaceAll(*submission.Language.RunCommand, "$SourceFileName", e.isolatePath+"/"+submission.Language.GetSourceFileName())
 	var wg sync.WaitGroup
 	for _, testcase := range testcase {
 		wg.Add(1)
 		go func(testcase *model.TestCase) {
 			defer wg.Done()
+			isolateCommand := fmt.Sprintf("isolate --cg -t %d -x 1 -w %d -k 64000 -p 5 --cg-mem=128000 -f 5120 -E PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\" -d /etc:noexec --run -- %s", submission.TimeLimit, submission.TimeLimit+4, command)
+			cmd := exec.Command("sh", "-c", isolateCommand)
+			var stdout strings.Builder
+			var stderr strings.Builder
+			cmd.Stdout = &stdout
+			cmd.Stderr = &stderr
+			err := cmd.Run()
+
 			result := &model.SubmissionResult{
 				SubmissionID: submission.ID,
 				TestCaseID:   testcase.ID,
 			}
-			_, err := e.run("echo ")
 			if err != nil {
-				var runTimeError = "Run time error"
-				var e = err.Error()
-				result.Status = &runTimeError
-				result.Stderr = &e
+				status := "Runtime Error"
+				errStr := stderr.String()
+				result.Stderr = &errStr
+				result.Status = &status
+			} else {
+				status := "Accepted"
+				stdoutStr := stdout.String()
+				result.Stdout = &stdoutStr
+				result.Status = &status
 			}
+
 			ch <- result
 		}(&testcase)
 	}
@@ -67,13 +90,14 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 
 // Compile implements Executor.
 func (e *executor) Compile(sb *model.Submission) error {
+
 	if sb.Language.CompileCommand == nil {
 		return nil
 	}
 	language := sb.Language
 	code := sb.Code
-	sourceFilename := e.cfx.CompileDir + "/" + language.GetSourceFileName()
-	binaryFilename := e.cfx.CompileDir + "/" + language.GetBinaryFileName()
+	sourceFilename := e.isolatePath + "/" + language.GetSourceFileName()
+	binaryFilename := e.isolatePath + "/" + language.GetBinaryFileName()
 	err := os.WriteFile(sourceFilename, []byte(*code), 0644)
 	if err != nil {
 		return err
@@ -81,14 +105,13 @@ func (e *executor) Compile(sb *model.Submission) error {
 
 	command := strings.ReplaceAll(*language.CompileCommand, "$SourceFileName", sourceFilename)
 	command = strings.ReplaceAll(command, "$BinaryFileName", binaryFilename)
-
 	execCmd := exec.Command("sh", "-c", command)
-	log.Printf("Running command: %s", command)
-	execCmd.Dir = e.cfx.CompileDir
+	execCmd.Dir = e.isolatePath
+	var stderr strings.Builder
+	execCmd.Stderr = &stderr
 	err = execCmd.Run()
-	execCmd.Wait()
 	if err != nil {
-		return err
+		return errors.New(stderr.String())
 	}
 	defer os.Remove(sourceFilename)
 	return nil
@@ -96,11 +119,10 @@ func (e *executor) Compile(sb *model.Submission) error {
 }
 
 func NewExecutor(logger *zap.Logger, cfx config.ExecutorConfig) Executor {
-	if _, err := os.Stat(cfx.CompileDir); os.IsNotExist(err) {
-		os.MkdirAll(cfx.CompileDir, 0755)
-	}
-	return &executor{
+	ex := &executor{
 		logger: logger,
 		cfx:    cfx,
 	}
+	ex.initIsolate()
+	return ex
 }
