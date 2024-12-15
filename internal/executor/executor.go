@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -75,11 +76,13 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 				return
 			}
 			metaResult, err := isolate.NewMetaResultFromFile(metaOutFilename)
+			log.Println(metaResult)
 			if err != nil {
 				errStr := err.Error()
 				result.Status = &RuntimeErrorStatus
 				result.Stdout = &errStr
 				ch <- result
+				return
 			}
 			if metaResult.ExitCode != 0 {
 				result.Status = &RuntimeErrorStatus
