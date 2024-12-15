@@ -10,14 +10,20 @@ type TestCase struct {
 	OutputFile   *string `json:"outputFile"`
 }
 
-func (t *TestCase) GenerateInputFileName() string {
-	newFileName := uuid.NewString() + ".in"
+func (t *TestCase) GetInputFileName() string {
+	if t.InputFile != nil {
+		return *t.InputFile
+	}
+	newFileName := uuid.NewString() + ".input"
 	t.InputFile = &newFileName
 	return newFileName
 }
 
-func (t *TestCase) GenerateExpectOutputFileName() string {
-	newFileName := uuid.NewString() + ".out"
+func (t *TestCase) GetExpectOutputFileName() string {
+	if t.OutputFile != nil {
+		return *t.OutputFile
+	}
+	newFileName := uuid.NewString() + ".output"
 	t.OutputFile = &newFileName
 	return newFileName
 }

@@ -41,7 +41,7 @@ func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.Execution
 				Stderr:       err.Error(),
 			})
 		}
-		ch := make(chan *model.SubmissionResult)
+		ch := make(chan *model.SubmissionResult, len(submission.TestCases))
 		go ex.Execute(submission, ch)
 		for result := range ch {
 			stream.Send(&proto.SubmissionResult{

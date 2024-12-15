@@ -1,0 +1,10 @@
+time:0.015
+time-wall:0.015
+max-rss:7876
+csw-voluntary:2
+csw-forced:1
+cg-mem:14192
+cg-oom-killed:1
+exitcode:1
+status:RE
+message:Exited with error status 1
