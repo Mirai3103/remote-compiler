@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/Mirai3103/remote-compiler/internal/model"
 	"github.com/Mirai3103/remote-compiler/pkg/config"
 	"github.com/Mirai3103/remote-compiler/pkg/isolate"
+	snowflakeid "github.com/Mirai3103/remote-compiler/pkg/snowflake_id"
 	"go.uber.org/zap"
 )
 
@@ -25,11 +25,6 @@ type Executor interface {
 type executor struct {
 	logger *zap.Logger
 	cfg    config.ExecutorConfig
-}
-
-func (e *executor) initIsolate() {
-	execCmd := exec.Command("isolate", "--cg", "--init")
-	execCmd.Run()
 }
 
 var (
@@ -48,7 +43,7 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 	command = strings.ReplaceAll(command, "$SourceFileName", e.cfg.IsolateDir+"/"+submission.Language.GetSourceFileName())
 	wg := sync.WaitGroup{}
 
-	isolateCommandBuilder := isolate.NewIsolateCommandBuilder().WithWallTime(submission.TimeLimit + 4).WithMaxFileSize(5120).AddDir("/etc:noexec").AddDir(e.cfg.IsolateDir).WithCGroup().WithTime(submission.TimeLimit).WithExtraTime(submission.TimeLimit).WithCGroupMemory(submission.MemoryLimit).WithStackSize(submission.MemoryLimit).AddEnv("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin").WithStderrToStdout()
+	isolateCommandBuilder := isolate.NewIsolateCommandBuilder().WithProcesses(4).WithWallTime(submission.TimeLimit + 4).WithMaxFileSize(5120).AddDir("/etc:noexec").AddDir(e.cfg.IsolateDir).WithCGroup().WithTime(submission.TimeLimit).WithExtraTime(submission.TimeLimit).WithCGroupMemory(submission.MemoryLimit).WithStackSize(submission.MemoryLimit).AddEnv("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin").WithStderrToStdout()
 
 	for _, testcase := range testcase {
 		wg.Add(1)
@@ -62,23 +57,36 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 			outputFilename := testcase.GetExpectOutputFileName()
 			metaOutFilename := e.cfg.IsolateDir + "/" + testcase.GetExpectOutputFileName() + ".meta"
 			os.WriteFile(inputFilename, []byte(*testcase.Input), 0644)
+			commandShFile := e.cfg.IsolateDir + "/" + snowflakeid.NewString() + ".sh"
+			os.WriteFile(commandShFile, []byte(command), 0644)
+			defer os.Remove(commandShFile)
+			defer os.Remove(inputFilename)
+			defer os.Remove(outputFilename)
+			defer os.Remove(metaOutFilename)
+			boxId := snowflakeid.NewInt()
+			boxDir, _ := isolate.InitBox(boxId)
+			defer func(boxId int) {
+				isolate.CleanBox(boxId)
+			}(boxId)
 
-			args := isolateCommandBuilder.WithStdinFile(inputFilename).WithStdoutFile(outputFilename).WithMetaFile(metaOutFilename).WithRunCommand(command).Build()
+			args := isolateCommandBuilder.Clone().WithBoxID(boxId).WithStdinFile(inputFilename).WithStdoutFile(outputFilename).WithMetaFile(metaOutFilename).WithRunCommands("/bin/bash", commandShFile).Build()
 			execCmd := exec.Command(args[0], args[1:]...)
-			execCmd.Dir = e.cfg.IsolateDir
 			fmt.Println(args)
+			e.logger.Info("Execute command: ", zap.Any("args", args))
+			execCmd.Dir = e.cfg.IsolateDir
 			err := execCmd.Run()
 			if err != nil {
 				errStr := err.Error()
+				e.logger.Error("Error when run boxId: ", zap.Any("boxId", boxId), zap.Error(err), zap.String("stdout", errStr))
 				result.Status = &RuntimeErrorStatus
 				result.Stdout = &errStr
 				ch <- result
 				return
 			}
 			metaResult, err := isolate.NewMetaResultFromFile(metaOutFilename)
-			log.Println(metaResult)
 			if err != nil {
 				errStr := err.Error()
+				e.logger.Error("Error when read meta of boxId: ", zap.Any("boxId", boxId), zap.Error(err))
 				result.Status = &RuntimeErrorStatus
 				result.Stdout = &errStr
 				ch <- result
@@ -90,6 +98,8 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 				ch <- result
 				return
 			}
+			result.MemoryUsage = metaResult.CGMem
+			result.TimeUsage = metaResult.TimeWall
 
 			if metaResult.TimeWall > float64(submission.TimeLimit) {
 				result.Status = &TimeLimitExceededStatus
@@ -97,14 +107,15 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 				return
 			}
 
-			if metaResult.CGMem > submission.MemoryLimit {
+			if metaResult.CGMem > float64(submission.MemoryLimit) {
 				result.Status = &MemoryLimitExceededStatus
 				ch <- result
 				return
 			}
 
-			file, err := os.Open("/var/local/lib/isolate/0/box/" + outputFilename)
+			file, err := os.Open(*boxDir + "/" + outputFilename)
 			if err != nil {
+				e.logger.Error("Error when read output file of boxId: ", zap.Any("boxId", boxId), zap.Error(err))
 				errStr := err.Error()
 				result.Status = &RuntimeErrorStatus
 				result.Stdout = &errStr
@@ -116,6 +127,7 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 			b, err := io.ReadAll(iotest.OneByteReader(file))
 			if err != nil {
 				errStr := err.Error()
+				e.logger.Error("Error when read output file of boxId: ", zap.Any("boxId", boxId), zap.Error(err))
 				ch <- &model.SubmissionResult{
 					SubmissionID: submission.ID,
 					TestCaseID:   testcase.ID,
@@ -134,6 +146,7 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 			}
 			result.Status = &SuccessStatus
 			result.Stdout = &stdout
+			e.logger.Debug("Result of boxId: ", zap.Any("boxId", boxId), zap.Any("result", result))
 			ch <- result
 		}(&testcase)
 	}
@@ -144,17 +157,19 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 
 // Compile implements Executor.
 func (e *executor) Compile(sb *model.Submission) error {
-	if sb.Language.CompileCommand == nil {
-		return nil
-	}
 	language := sb.Language
 	code := sb.Code
 	sourceFilename := e.cfg.IsolateDir + "/" + language.GetSourceFileName()
-	binaryFilename := e.cfg.IsolateDir + "/" + language.GetBinaryFileName()
 	err := os.WriteFile(sourceFilename, []byte(*code), 0644)
 	if err != nil {
+		e.logger.Error("Error when write source file", zap.Error(err))
 		return err
 	}
+	if sb.Language.CompileCommand == nil {
+		return nil
+	}
+
+	binaryFilename := e.cfg.IsolateDir + "/" + language.GetBinaryFileName()
 
 	command := strings.ReplaceAll(*language.CompileCommand, "$SourceFileName", sourceFilename)
 	command = strings.ReplaceAll(command, "$BinaryFileName", binaryFilename)
@@ -164,6 +179,7 @@ func (e *executor) Compile(sb *model.Submission) error {
 	execCmd.Stderr = &stderr
 	err = execCmd.Run()
 	if err != nil {
+		e.logger.Error("Error when compile", zap.Error(err), zap.String("stderr", stderr.String()))
 		return errors.New(stderr.String())
 	}
 	defer os.Remove(sourceFilename)
@@ -176,6 +192,5 @@ func NewExecutor(logger *zap.Logger, cfg config.ExecutorConfig) Executor {
 		logger: logger,
 		cfg:    cfg,
 	}
-	ex.initIsolate()
 	return ex
 }

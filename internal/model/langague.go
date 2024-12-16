@@ -1,6 +1,6 @@
 package model
 
-import "github.com/google/uuid"
+import snowflakeid "github.com/Mirai3103/remote-compiler/pkg/snowflake_id"
 
 type Language struct {
 	Version        *string `yaml:"version" json:"version"`
@@ -14,19 +14,25 @@ type Language struct {
 }
 
 func (l *Language) GetSourceFileName() string {
+	if l.SourceFileExt == nil {
+		return ""
+	}
 	if l.sourceFileName != nil {
 		return *l.sourceFileName
 	}
-	newFileName := uuid.NewString() + *l.SourceFileExt
+	newFileName := snowflakeid.NewString() + *l.SourceFileExt
 	l.sourceFileName = &newFileName
 	return newFileName
 }
 
 func (l *Language) GetBinaryFileName() string {
+	if l.BinaryFileExt == nil {
+		return ""
+	}
 	if l.binaryFileName != nil {
 		return *l.binaryFileName
 	}
-	newFileName := uuid.NewString() + *l.BinaryFileExt
+	newFileName := snowflakeid.NewString() + *l.BinaryFileExt
 	l.binaryFileName = &newFileName
 	return newFileName
 }

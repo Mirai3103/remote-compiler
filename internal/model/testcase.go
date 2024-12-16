@@ -1,6 +1,6 @@
 package model
 
-import "github.com/google/uuid"
+import snowflakeid "github.com/Mirai3103/remote-compiler/pkg/snowflake_id"
 
 type TestCase struct {
 	ID           *string `json:"id"`
@@ -14,7 +14,7 @@ func (t *TestCase) GetInputFileName() string {
 	if t.InputFile != nil {
 		return *t.InputFile
 	}
-	newFileName := uuid.NewString() + ".input"
+	newFileName := snowflakeid.NewString() + ".input"
 	t.InputFile = &newFileName
 	return newFileName
 }
@@ -23,7 +23,7 @@ func (t *TestCase) GetExpectOutputFileName() string {
 	if t.OutputFile != nil {
 		return *t.OutputFile
 	}
-	newFileName := uuid.NewString() + ".output"
+	newFileName := snowflakeid.NewString() + ".output"
 	t.OutputFile = &newFileName
 	return newFileName
 }

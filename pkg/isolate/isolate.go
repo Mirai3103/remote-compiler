@@ -2,6 +2,7 @@ package isolate
 
 import (
 	"fmt"
+	"os/exec"
 )
 
 type IsolateCommandBuilder struct {
@@ -144,10 +145,16 @@ func (icb *IsolateCommandBuilder) WithMetaFile(file string) *IsolateCommandBuild
 }
 
 func (icb *IsolateCommandBuilder) WithRunCommand(command string) *IsolateCommandBuilder {
+
 	icb.agrs = append(icb.agrs, "--run", "--", command)
+
 	return icb
 }
-
+func (icb *IsolateCommandBuilder) WithRunCommands(commands ...string) *IsolateCommandBuilder {
+	icb.agrs = append(icb.agrs, "--run", "--")
+	icb.agrs = append(icb.agrs, commands...)
+	return icb
+}
 func (icb *IsolateCommandBuilder) Build() []string {
 	return icb.agrs
 }
@@ -158,4 +165,26 @@ func (icb *IsolateCommandBuilder) Clone() *IsolateCommandBuilder {
 	return &IsolateCommandBuilder{
 		agrs: cloned,
 	}
+}
+
+func InitBox(boxId int) (*string, error) {
+	//isolate --cg --init --box-id=52342334234
+	args := []string{"--cg", "--init", "--box-id=" + fmt.Sprint(boxId)}
+	cmd := exec.Command("isolate", args...)
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+	boxDir := fmt.Sprintf("/var/local/lib/isolate/%d/box", boxId)
+	return &boxDir, nil
+}
+
+func CleanBox(boxId int) error {
+	args := []string{"--cg", "--cleanup", "--box-id=" + fmt.Sprint(boxId)}
+	cmd := exec.Command("isolate", args...)
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+	return nil
 }

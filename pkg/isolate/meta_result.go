@@ -13,7 +13,7 @@ type MetaResult struct {
 	MaxRSS       int
 	CSWVoluntary int
 	CSWForced    int
-	CGMem        int
+	CGMem        float64
 	CGOMMKilled  int
 	ExitCode     int
 	Status       string
@@ -64,7 +64,7 @@ func NewMetaResultFromFile(file string) (*MetaResult, error) {
 		case "csw-forced":
 			result.CSWForced, _ = strconv.Atoi(value)
 		case "cg-mem":
-			result.CGMem, _ = strconv.Atoi(value)
+			result.CGMem, _ = strconv.ParseFloat(value, 64)
 		case "cg-oom-killed":
 			result.CGOMMKilled, _ = strconv.Atoi(value)
 		case "exitcode":
