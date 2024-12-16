@@ -18,7 +18,7 @@ ENV PATH=$PATH:$GOPATH/bin
 ENV PATH=$PATH:/usr/local/bin
 WORKDIR /build
 COPY . .
-RUN go build -o main.out main.go
+RUN go build -o main.out cmd/server/main.go 
 COPY  main.out /usr/local/bin/app.out
 EXPOSE 8080
 CMD ["app.out"]
