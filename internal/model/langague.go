@@ -3,8 +3,6 @@ package model
 import snowflakeid "github.com/Mirai3103/remote-compiler/pkg/snowflake_id"
 
 type Language struct {
-	Version        *string `yaml:"version" json:"version"`
-	Name           *string `yaml:"name" json:"name"`
 	SourceFileExt  *string `yaml:"source_file" json:"sourceFileExt"`
 	BinaryFileExt  *string `yaml:"binary_file" json:"binaryFileExt"`
 	CompileCommand *string `yaml:"compile_command" json:"compileCommand"`

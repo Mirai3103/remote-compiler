@@ -14,40 +14,33 @@ func ptr(s string) *string {
 
 func main() {
 	cpp := model.Language{
-		Version:        ptr("g++ 12.2.0"),
-		Name:           ptr("C++"),
 		SourceFileExt:  ptr(".cpp"),
 		BinaryFileExt:  ptr(".out"),
 		CompileCommand: ptr("g++ $SourceFileName -o $BinaryFileName"),
 		RunCommand:     ptr("$BinaryFileName"),
 	}
 	c := model.Language{
-		Version:        ptr("gcc 12.2.0"),
-		Name:           ptr("C"),
 		SourceFileExt:  ptr(".c"),
 		BinaryFileExt:  ptr(".out"),
 		CompileCommand: ptr("gcc $SourceFileName -o $BinaryFileName"),
 		RunCommand:     ptr("$BinaryFileName"),
 	}
 	python := model.Language{
-		Version:        ptr("Python 3.11.2"),
-		Name:           ptr("Python3"),
+
 		SourceFileExt:  ptr(".py"),
 		BinaryFileExt:  nil,
 		CompileCommand: nil,
 		RunCommand:     ptr("python3 $SourceFileName"),
 	}
 	goLang := model.Language{
-		Version:        ptr("Go 1.23.4"),
-		Name:           ptr("Go"),
+
 		SourceFileExt:  ptr(".go"),
 		BinaryFileExt:  ptr(".out"),
 		CompileCommand: ptr("go build -o $BinaryFileName $SourceFileName"),
 		RunCommand:     ptr("$BinaryFileName"),
 	}
 	node := model.Language{
-		Version:        ptr("Node.js 16.13.0"),
-		Name:           ptr("Node.js"),
+
 		SourceFileExt:  ptr(".js"),
 		BinaryFileExt:  nil,
 		CompileCommand: nil,

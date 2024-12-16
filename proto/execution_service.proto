@@ -9,8 +9,6 @@ service ExecutionService {
 }
 
 message Language {
-  string version = 1;
-  string name = 2;
   string source_file_ext= 3;
   string binary_file_ext = 4;
   string compile_command = 5;
@@ -22,7 +20,8 @@ message SubmissionResult {
   string test_case_id = 2;
   string status = 3;
   string stdout = 4;
-  string stderr = 5;
+  float memory_usage = 5;
+  float time_usage = 6;
 }
 
 message TestCase {

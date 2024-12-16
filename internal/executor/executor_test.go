@@ -24,8 +24,6 @@ func TestExecutor(t *testing.T) {
 
 	submission := &model.Submission{
 		Language: &model.Language{
-			Version:        ptr("g++ 12.2.0"),
-			Name:           ptr("C++"),
 			SourceFileExt:  ptr(".cpp"),
 			BinaryFileExt:  ptr(".out"),
 			CompileCommand: ptr("g++ $SourceFileName -o $BinaryFileName"),
@@ -66,8 +64,6 @@ func TestExecutor_SimpleAdd(t *testing.T) {
 
 	submission := &model.Submission{
 		Language: &model.Language{
-			Version:        ptr("g++ 12.2.0"),
-			Name:           ptr("C++"),
 			SourceFileExt:  ptr(".cpp"),
 			BinaryFileExt:  ptr(".out"),
 			CompileCommand: ptr("g++ $SourceFileName -o $BinaryFileName"),
@@ -130,8 +126,6 @@ func TestExecutor_Fibonacci(t *testing.T) {
 
 	submission := &model.Submission{
 		Language: &model.Language{
-			Version:        ptr("Python3 3.9.7"),
-			Name:           ptr("Python3"),
 			SourceFileExt:  ptr(".py"),
 			BinaryFileExt:  nil,
 			CompileCommand: nil,

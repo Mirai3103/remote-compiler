@@ -38,7 +38,7 @@ func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.Execution
 				SubmissionId: *submission.ID,
 				TestCaseId:   *testCase.ID,
 				Status:       "Compile Error",
-				Stderr:       err.Error(),
+				Stdout:       err.Error(),
 			})
 		}
 		ch := make(chan *model.SubmissionResult, len(submission.TestCases))
@@ -56,7 +56,7 @@ func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.Execution
 				SubmissionId: *submission.ID,
 				TestCaseId:   *testCase.ID,
 				Status:       "Compile Error",
-				Stderr:       errStr,
+				Stdout:       errStr,
 			})
 		}
 	}
@@ -68,8 +68,6 @@ func convertLanguage(lang *proto.Language) *model.Language {
 		return nil
 	}
 	return &model.Language{
-		Version:        &lang.Version,
-		Name:           &lang.Name,
 		SourceFileExt:  &lang.SourceFileExt,
 		BinaryFileExt:  &lang.BinaryFileExt,
 		CompileCommand: &lang.CompileCommand,
