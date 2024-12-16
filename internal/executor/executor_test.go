@@ -16,7 +16,7 @@ func ptr(s string) *string {
 }
 
 func TestExecutor(t *testing.T) {
-	cfg, err := config.LoadConfig("/root/remote-compiler/config.yaml")
+	cfg, err := config.LoadConfig("/home/dev/app/config.yaml")
 	assert.NoError(t, err)
 
 	log := logger.GetLogger()
@@ -58,7 +58,7 @@ func TestExecutor(t *testing.T) {
 }
 
 func TestExecutor_SimpleAdd(t *testing.T) {
-	cfg, err := config.LoadConfig("/root/remote-compiler/config.yaml")
+	cfg, err := config.LoadConfig("/home/dev/app/config.yaml")
 	assert.NoError(t, err)
 
 	log := logger.GetLogger()
@@ -122,7 +122,7 @@ func TestExecutor_SimpleAdd(t *testing.T) {
 }
 
 func TestExecutor_Fibonacci(t *testing.T) {
-	cfg, err := config.LoadConfig("/root/remote-compiler/config.yaml")
+	cfg, err := config.LoadConfig("/home/dev/app/config.yaml")
 	assert.NoError(t, err)
 
 	log := logger.GetLogger()
@@ -145,7 +145,7 @@ func TestExecutor_Fibonacci(t *testing.T) {
 			{
 				ID:           ptr("1"),
 				Input:        ptr(""),
-				ExpectOutput: ptr("Hello, World!"),
+				ExpectOutput: ptr("Hello World!\n"),
 			},
 		},
 	}
@@ -159,6 +159,7 @@ func TestExecutor_Fibonacci(t *testing.T) {
 	var result *model.SubmissionResult
 	for r := range ch {
 		result = r
+		log.Info("result", zap.String("status", *result.Status), zap.Float64("time", result.TimeUsage), zap.Float64("memory", result.MemoryUsage), zap.String("stdout", *result.Stdout))
 		assert.Equal(t, "Success", *result.Status)
 	}
 
