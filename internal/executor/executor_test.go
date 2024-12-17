@@ -16,7 +16,7 @@ func ptr(s string) *string {
 }
 
 func TestExecutor(t *testing.T) {
-	cfg, err := config.LoadConfig("/home/dev/app/config.yaml")
+	cfg, err := config.LoadConfig("/root/remote_compiler/config.yaml")
 	assert.NoError(t, err)
 
 	log := logger.GetLogger()
@@ -56,7 +56,7 @@ func TestExecutor(t *testing.T) {
 }
 
 func TestExecutor_SimpleAdd(t *testing.T) {
-	cfg, err := config.LoadConfig("/home/dev/app/config.yaml")
+	cfg, err := config.LoadConfig("/root/remote_compiler/config.yaml")
 	assert.NoError(t, err)
 
 	log := logger.GetLogger()
@@ -118,7 +118,7 @@ func TestExecutor_SimpleAdd(t *testing.T) {
 }
 
 func TestExecutor_Fibonacci(t *testing.T) {
-	cfg, err := config.LoadConfig("/home/dev/app/config.yaml")
+	cfg, err := config.LoadConfig("/root/remote_compiler/config.yaml")
 	assert.NoError(t, err)
 
 	log := logger.GetLogger()

@@ -36,11 +36,12 @@ var (
 	MemoryLimitExceededStatus = "Memory Limit Exceeded"
 )
 
-// isolate --cg -t $timeLimit -x 1 -w ($timeLimit + 4) -k 64000 -p 5 --cg-mem=128000 -f 5120 -E PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" -d /etc:noexec --run -- $RunCommand
 func (e *executor) Execute(submission *model.Submission, ch chan<- *model.SubmissionResult) error {
 	testcase := submission.TestCases
 	command := strings.ReplaceAll(*submission.Language.RunCommand, "$BinaryFileName", e.cfg.IsolateDir+"/"+submission.Language.GetBinaryFileName())
 	command = strings.ReplaceAll(command, "$SourceFileName", e.cfg.IsolateDir+"/"+submission.Language.GetSourceFileName())
+	defer os.Remove(e.cfg.IsolateDir + "/" + submission.Language.GetSourceFileName())
+	defer os.Remove(e.cfg.IsolateDir + "/" + submission.Language.GetBinaryFileName())
 	wg := sync.WaitGroup{}
 
 	isolateCommandBuilder := isolate.NewIsolateCommandBuilder().WithProcesses(4).WithWallTime(submission.TimeLimit + 4).WithMaxFileSize(5120).AddDir("/etc:noexec").AddDir(e.cfg.IsolateDir).WithCGroup().WithTime(submission.TimeLimit).WithExtraTime(submission.TimeLimit).WithCGroupMemory(submission.MemoryLimit).WithStackSize(submission.MemoryLimit).AddEnv("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin").WithStderrToStdout()
@@ -71,15 +72,22 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 
 			args := isolateCommandBuilder.Clone().WithBoxID(boxId).WithStdinFile(inputFilename).WithStdoutFile(outputFilename).WithMetaFile(metaOutFilename).WithRunCommands("/bin/bash", commandShFile).Build()
 			execCmd := exec.Command(args[0], args[1:]...)
-			fmt.Println(args)
+			var stderr strings.Builder
+			execCmd.Stderr = &stderr
+			fmt.Println(*submission.Code)
 			e.logger.Info("Execute command: ", zap.Any("args", args))
 			execCmd.Dir = e.cfg.IsolateDir
 			err := execCmd.Run()
+			file, _ := os.Open(*boxDir + "/" + outputFilename)
+			defer file.Close()
+
+			b, _ := io.ReadAll(iotest.OneByteReader(file))
 			if err != nil {
 				errStr := err.Error()
+				stdout := string(b) + "\n" + stderr.String()
 				e.logger.Error("Error when run boxId: ", zap.Any("boxId", boxId), zap.Error(err), zap.String("stdout", errStr))
 				result.Status = &RuntimeErrorStatus
-				result.Stdout = &errStr
+				result.Stdout = &stdout
 				ch <- result
 				return
 			}
@@ -113,18 +121,6 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 				return
 			}
 
-			file, err := os.Open(*boxDir + "/" + outputFilename)
-			if err != nil {
-				e.logger.Error("Error when read output file of boxId: ", zap.Any("boxId", boxId), zap.Error(err))
-				errStr := err.Error()
-				result.Status = &RuntimeErrorStatus
-				result.Stdout = &errStr
-				ch <- result
-				return
-			}
-			defer file.Close()
-
-			b, err := io.ReadAll(iotest.OneByteReader(file))
 			if err != nil {
 				errStr := err.Error()
 				e.logger.Error("Error when read output file of boxId: ", zap.Any("boxId", boxId), zap.Error(err))
@@ -161,11 +157,12 @@ func (e *executor) Compile(sb *model.Submission) error {
 	code := sb.Code
 	sourceFilename := e.cfg.IsolateDir + "/" + language.GetSourceFileName()
 	err := os.WriteFile(sourceFilename, []byte(*code), 0644)
+
 	if err != nil {
 		e.logger.Error("Error when write source file", zap.Error(err))
 		return err
 	}
-	if sb.Language.CompileCommand == nil {
+	if sb.Language.CompileCommand == nil || *sb.Language.CompileCommand == "" {
 		return nil
 	}
 
@@ -182,7 +179,7 @@ func (e *executor) Compile(sb *model.Submission) error {
 		e.logger.Error("Error when compile", zap.Error(err), zap.String("stderr", stderr.String()))
 		return errors.New(stderr.String())
 	}
-	defer os.Remove(sourceFilename)
+	os.Remove(sourceFilename)
 	return nil
 
 }

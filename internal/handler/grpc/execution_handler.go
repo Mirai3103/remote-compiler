@@ -33,20 +33,16 @@ func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.Execution
 	var ex = executor.NewExecutor(log, h.cfx.Executor)
 	err := ex.Compile(submission)
 	if err == nil {
-		for _, testCase := range submission.TestCases {
-			stream.Send(&proto.SubmissionResult{
-				SubmissionId: *submission.ID,
-				TestCaseId:   *testCase.ID,
-				Status:       "Compile Error",
-				Stdout:       err.Error(),
-			})
-		}
 		ch := make(chan *model.SubmissionResult, len(submission.TestCases))
 		go ex.Execute(submission, ch)
 		for result := range ch {
 			stream.Send(&proto.SubmissionResult{
 				SubmissionId: *result.SubmissionID,
 				TestCaseId:   *result.TestCaseID,
+				Status:       *result.Status,
+				Stdout:       *result.Stdout,
+				MemoryUsage:  float32(result.MemoryUsage),
+				TimeUsage:    float32(result.TimeUsage),
 			})
 		}
 	} else {

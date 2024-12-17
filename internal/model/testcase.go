@@ -11,7 +11,7 @@ type TestCase struct {
 }
 
 func (t *TestCase) GetInputFileName() string {
-	if t.InputFile != nil {
+	if t.InputFile != nil && *t.InputFile != "" {
 		return *t.InputFile
 	}
 	newFileName := snowflakeid.NewString() + ".input"
@@ -20,7 +20,7 @@ func (t *TestCase) GetInputFileName() string {
 }
 
 func (t *TestCase) GetExpectOutputFileName() string {
-	if t.OutputFile != nil {
+	if t.OutputFile != nil && *t.OutputFile != "" {
 		return *t.OutputFile
 	}
 	newFileName := snowflakeid.NewString() + ".output"
