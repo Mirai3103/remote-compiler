@@ -26,28 +26,31 @@ func main() {
 		RunCommand:     ptr("$BinaryFileName"),
 	}
 	python := model.Language{
-
 		SourceFileExt:  ptr(".py"),
 		BinaryFileExt:  nil,
 		CompileCommand: nil,
 		RunCommand:     ptr("python3 $SourceFileName"),
 	}
 	goLang := model.Language{
-
 		SourceFileExt:  ptr(".go"),
 		BinaryFileExt:  ptr(".out"),
 		CompileCommand: ptr("go build -o $BinaryFileName $SourceFileName"),
 		RunCommand:     ptr("$BinaryFileName"),
 	}
 	node := model.Language{
-
 		SourceFileExt:  ptr(".js"),
 		BinaryFileExt:  nil,
 		CompileCommand: nil,
 		RunCommand:     ptr("node $SourceFileName"),
 	}
+	shell := model.Language{
+		SourceFileExt:  ptr(".sh"),
+		BinaryFileExt:  nil,
+		CompileCommand: nil,
+		RunCommand:     ptr("/bin/bash $SourceFileName"),
+	}
 
-	listLang := []model.Language{cpp, c, python, goLang, node}
+	listLang := []model.Language{cpp, c, python, goLang, node, shell}
 	json, _ := json.MarshalIndent(listLang, "", "  ")
 	err := os.WriteFile("languages.json", json, 0644)
 	if err != nil {
