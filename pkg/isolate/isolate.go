@@ -168,9 +168,9 @@ func (icb *IsolateCommandBuilder) Clone() *IsolateCommandBuilder {
 }
 
 func InitBox(boxId int) (*string, error) {
-	//isolate --cg --init --box-id=52342334234
 	args := []string{"--cg", "--init", "--box-id=" + fmt.Sprint(boxId)}
 	cmd := exec.Command("isolate", args...)
+	fmt.Println("run command: ", cmd.String())
 	err := cmd.Run()
 	if err != nil {
 		return nil, err

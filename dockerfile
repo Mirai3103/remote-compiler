@@ -8,7 +8,7 @@ RUN set -xe && \
     cd /tmp/isolate && \
     make -j$(nproc) install && \
     rm -rf /tmp/*
-    
+
 RUN set -xe && \
     curl -OL https://golang.org/dl/go1.22.1.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.22.1.linux-amd64.tar.gz && \
@@ -20,6 +20,7 @@ ENV PATH=$PATH:/usr/local/go/bin:/build/bin:/usr/local/bin \
 WORKDIR /build
 COPY . .
 RUN go build -o /usr/local/bin/app.out cmd/server/main.go
+RUN mkdir /isolateBox 
 
 EXPOSE 8080
 EXPOSE 50051

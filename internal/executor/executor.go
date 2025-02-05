@@ -40,8 +40,8 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 	testcase := submission.TestCases
 	command := strings.ReplaceAll(*submission.Language.RunCommand, "$BinaryFileName", e.cfg.IsolateDir+"/"+submission.Language.GetBinaryFileName())
 	command = strings.ReplaceAll(command, "$SourceFileName", e.cfg.IsolateDir+"/"+submission.Language.GetSourceFileName())
-	// defer os.Remove(e.cfg.IsolateDir + "/" + submission.Language.GetSourceFileName())
-	// defer os.Remove(e.cfg.IsolateDir + "/" + submission.Language.GetBinaryFileName())
+	defer os.Remove(e.cfg.IsolateDir + "/" + submission.Language.GetSourceFileName())
+	defer os.Remove(e.cfg.IsolateDir + "/" + submission.Language.GetBinaryFileName())
 	wg := sync.WaitGroup{}
 
 	isolateCommandBuilder := isolate.NewIsolateCommandBuilder().WithProcesses(4).WithWallTime(submission.TimeLimit + 4).WithMaxFileSize(5120).AddDir("/etc:noexec").AddDir(e.cfg.IsolateDir).WithCGroup().WithTime(submission.TimeLimit).WithExtraTime(submission.TimeLimit).WithCGroupMemory(submission.MemoryLimit).WithStackSize(submission.MemoryLimit).AddEnv("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin").WithStderrToStdout()
@@ -60,15 +60,25 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 			os.WriteFile(inputFilename, []byte(*testcase.Input), 0644)
 			commandShFile := e.cfg.IsolateDir + "/" + snowflakeid.NewString() + ".sh"
 			os.WriteFile(commandShFile, []byte(command), 0644)
-			// defer os.Remove(commandShFile)
-			// defer os.Remove(inputFilename)
-			// defer os.Remove(outputFilename)
-			// defer os.Remove(metaOutFilename)
-			boxId := snowflakeid.NewInt()
-			boxDir, _ := isolate.InitBox(boxId)
-			// defer func(boxId int) {
-			// 	isolate.CleanBox(boxId)
-			// }(boxId)
+			defer os.Remove(commandShFile)
+			defer os.Remove(inputFilename)
+			defer os.Remove(outputFilename)
+			defer os.Remove(metaOutFilename)
+			boxId := snowflakeid.NewInt()%100000 + 1
+			boxDir, err := isolate.InitBox(boxId)
+			if err != nil {
+				e.logger.Error("Error when init boxId: ", zap.Any("boxId", boxId), zap.Error(err))
+				ch <- &model.SubmissionResult{
+					SubmissionID: submission.ID,
+					TestCaseID:   testcase.ID,
+					Status:       &RuntimeErrorStatus,
+					Stdout:       nil,
+				}
+				return
+			}
+			defer func(boxId int) {
+				isolate.CleanBox(boxId)
+			}(boxId)
 
 			args := isolateCommandBuilder.Clone().WithBoxID(boxId).WithStdinFile(inputFilename).WithStdoutFile(outputFilename).WithMetaFile(metaOutFilename).WithRunCommands("/bin/bash", commandShFile).Build()
 			execCmd := exec.Command(args[0], args[1:]...)
@@ -77,8 +87,25 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 			fmt.Println(*submission.Code)
 			e.logger.Info("Execute command: ", zap.Any("args", args))
 			execCmd.Dir = e.cfg.IsolateDir
-			err := execCmd.Run()
-			file, _ := os.Open(*boxDir + "/" + outputFilename)
+			err = execCmd.Run()
+			if err != nil {
+				errStr := err.Error()
+				e.logger.Error("Error when run boxId: ", zap.Any("boxId", boxId), zap.Error(err), zap.String("stderr", stderr.String()))
+				result.Status = &RuntimeErrorStatus
+				result.Stdout = &errStr
+				ch <- result
+				return
+			}
+
+			file, err := os.Open(*boxDir + "/" + outputFilename)
+			if err != nil {
+				errStr := err.Error()
+				e.logger.Error("Error when open output file of boxId: ", zap.Any("boxId", boxId), zap.Error(err))
+				result.Status = &RuntimeErrorStatus
+				result.Stdout = &errStr
+				ch <- result
+				return
+			}
 			defer file.Close()
 
 			b, _ := io.ReadAll(iotest.OneByteReader(file))
