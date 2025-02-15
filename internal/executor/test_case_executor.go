@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"testing/iotest"
 
-	"github.com/Mirai3103/remote-compiler/internal/model"
-	"github.com/Mirai3103/remote-compiler/pkg/isolate"
+	"github.com/Mirai3103/remote-compiler/internal/isolate"
+	model "github.com/Mirai3103/remote-compiler/internal/models"
 	snowflakeid "github.com/Mirai3103/remote-compiler/pkg/snowflake_id"
 	"go.uber.org/zap"
 )

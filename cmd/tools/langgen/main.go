@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/Mirai3103/remote-compiler/internal/model"
+	model "github.com/Mirai3103/remote-compiler/internal/models"
 	"gopkg.in/yaml.v3"
 )
 

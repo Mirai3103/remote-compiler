@@ -2,7 +2,7 @@ package grpc
 
 import (
 	"github.com/Mirai3103/remote-compiler/internal/executor"
-	"github.com/Mirai3103/remote-compiler/internal/model"
+	model "github.com/Mirai3103/remote-compiler/internal/models"
 	"github.com/Mirai3103/remote-compiler/pkg/config"
 	"github.com/Mirai3103/remote-compiler/pkg/logger"
 	"github.com/Mirai3103/remote-compiler/proto"
