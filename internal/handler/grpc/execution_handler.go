@@ -87,6 +87,9 @@ func convertTestCases(testCases []*proto.TestCase) []model.TestCase {
 }
 
 func convertSubmissionSettings(settings *proto.SubmissionSettings) *model.SubmissionSettings {
+	if settings == nil {
+		return &model.SubmissionSettings{}
+	}
 	return &model.SubmissionSettings{
 		WithTrim:          settings.WithTrim,
 		WithCaseSensitive: settings.WithCaseSensitive,
