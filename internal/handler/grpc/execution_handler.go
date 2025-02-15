@@ -29,6 +29,7 @@ func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.Execution
 		TimeLimit:   int(req.TimeLimit),
 		MemoryLimit: int(req.MemoryLimit),
 		TestCases:   convertTestCases(req.TestCases),
+		Settings:    convertSubmissionSettings(req.Settings),
 	}
 	var ex = executor.NewExecutor(log, h.cfx.Executor)
 	err := ex.Compile(submission)
@@ -83,4 +84,12 @@ func convertTestCases(testCases []*proto.TestCase) []model.TestCase {
 		})
 	}
 	return result
+}
+
+func convertSubmissionSettings(settings *proto.SubmissionSettings) *model.SubmissionSettings {
+	return &model.SubmissionSettings{
+		WithTrim:          settings.WithTrim,
+		WithCaseSensitive: settings.WithCaseSensitive,
+		WithWhitespace:    settings.WithWhitespace,
+	}
 }

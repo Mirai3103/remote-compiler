@@ -7,6 +7,11 @@ option go_package = "github.com/Mirai3103/remote-compiler/proto";
 service ExecutionService {
     rpc Execute(Submission) returns (stream SubmissionResult) {}
 }
+message SubmissionSettings {
+  bool with_trim = 1;
+  bool with_case_sensitive = 2;
+  bool with_whitespace = 3;
+}
 
 message Language {
   string source_file_ext= 3;
@@ -39,4 +44,5 @@ message Submission {
   int32 time_limit = 4;
   int32 memory_limit = 5;
   repeated TestCase test_cases = 6;
+  SubmissionSettings settings = 7;
 }

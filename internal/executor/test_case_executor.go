@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"testing/iotest"
 
 	"github.com/Mirai3103/remote-compiler/internal/model"
@@ -55,7 +56,7 @@ func (e *TestCaseExecutor) Execute(testcase *model.TestCase) *model.SubmissionRe
 		return e.handleError(err, boxId)
 	}
 
-	return e.processExecutionResult(execResult, testcase)
+	return e.processExecutionResult(execResult, testcase, e.submission.Settings)
 }
 
 func (e *TestCaseExecutor) setupEnvironment(testcase *model.TestCase, boxId int) error {
@@ -104,7 +105,7 @@ func (e *TestCaseExecutor) runIsolatedCommand(testcase *model.TestCase, boxId in
 	return isolate.NewMetaResultFromFile(metaOutFilename)
 }
 
-func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult, testcase *model.TestCase) *model.SubmissionResult {
+func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult, testcase *model.TestCase, settings *model.SubmissionSettings) *model.SubmissionResult {
 	result := &model.SubmissionResult{
 		SubmissionID: e.submission.ID,
 		TestCaseID:   testcase.ID,
@@ -134,6 +135,17 @@ func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult
 		errStr := err.Error()
 		result.Stdout = &errStr
 		return result
+	}
+
+	if settings.WithTrim {
+		output = strings.TrimSpace(output)
+	}
+	if settings.WithCaseSensitive {
+		output = strings.ToLower(output)
+		*testcase.ExpectOutput = strings.ToLower(*testcase.ExpectOutput)
+	}
+	if !settings.WithWhitespace {
+		output = strings.ReplaceAll(output, " ", "")
 	}
 
 	if output != *testcase.ExpectOutput {
