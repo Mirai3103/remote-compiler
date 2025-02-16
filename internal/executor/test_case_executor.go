@@ -111,8 +111,19 @@ func (e *TestCaseExecutor) runIsolatedCommand(testcase *model.TestCase, boxId in
 
 	execCmd := exec.Command(args[0], args[1:]...)
 	execCmd.Dir = e.isolateDir
-
+	execCmd.Stderr = os.Stderr
+	execCmd.Stdout = os.Stdout
 	if err := execCmd.Run(); err != nil {
+		output, err1 := e.readOutput(testcase.GetExpectOutputFileName())
+		if err1 == nil {
+			e.logger.Error("Run isolated command failed with output", zap.String("output", output))
+		}
+		var metaResult *isolate.MetaResult
+		if metaResult, err1 = isolate.NewMetaResultFromFile(metaOutFilename); err1 != nil {
+			return nil, err1
+		}
+		e.logger.Error("Run isolated command failed with meta", zap.Any("metaResult", metaResult))
+
 		return nil, err
 	}
 
@@ -153,6 +164,7 @@ func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult
 
 	if settings.WithTrim {
 		output = strings.TrimSpace(output)
+		*testcase.ExpectOutput = strings.TrimSpace(*testcase.ExpectOutput)
 	}
 	if settings.WithCaseSensitive {
 		output = strings.ToLower(output)
@@ -160,8 +172,8 @@ func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult
 	}
 	if !settings.WithWhitespace {
 		output = strings.ReplaceAll(output, " ", "")
+		*testcase.ExpectOutput = strings.ReplaceAll(*testcase.ExpectOutput, " ", "")
 	}
-
 	if output != *testcase.ExpectOutput {
 		result.Status = &StatusWrongAnswer
 		result.Stdout = &output

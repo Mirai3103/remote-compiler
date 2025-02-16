@@ -42,13 +42,12 @@ func (e *executor) Execute(submission *model.Submission, ch chan<- *model.Submis
 }
 
 func (e *executor) Compile(submission *model.Submission) error {
-	if !e.needsCompilation(submission) {
-		return nil
-	}
-
 	sourceFilename := e.writeSourceFile(submission)
 	if sourceFilename == "" {
 		return errors.New("failed to write source file")
+	}
+	if !e.needsCompilation(submission) {
+		return nil
 	}
 
 	command := e.buildCompileCommand(submission, sourceFilename)
@@ -72,6 +71,7 @@ func (e *executor) needsCompilation(submission *model.Submission) bool {
 
 func (e *executor) writeSourceFile(submission *model.Submission) string {
 	sourceFilename := e.cfg.IsolateDir + "/" + submission.Language.GetSourceFileName()
+	e.logger.Info("Writing source file", zap.String("filename", sourceFilename))
 	err := os.WriteFile(sourceFilename, []byte(*submission.Code), 0644)
 	if err != nil {
 		e.logger.Error("Error writing source file", zap.Error(err))
