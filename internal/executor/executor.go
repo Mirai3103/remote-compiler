@@ -91,10 +91,10 @@ func (e *executor) runCompileCommand(command string) error {
 	execCmd.Dir = e.cfg.IsolateDir
 	var stderr strings.Builder
 	execCmd.Stderr = &stderr
-	
+
 	if err := execCmd.Run(); err != nil {
-		e.logger.Error("Compilation error", 
-			zap.Error(err), 
+		e.logger.Error("Compilation error",
+			zap.Error(err),
 			zap.String("stderr", stderr.String()))
 		return errors.New(stderr.String())
 	}

@@ -19,6 +19,7 @@ type TestCaseExecutor struct {
 	isolateCommandBuilder *isolate.IsolateCommandBuilder
 	command               string
 	submission            *model.Submission
+	shFile                *string
 }
 
 func NewTestCaseExecutor(logger *zap.Logger, isolateDir string, command string, submission *model.Submission) *TestCaseExecutor {
@@ -27,6 +28,7 @@ func NewTestCaseExecutor(logger *zap.Logger, isolateDir string, command string, 
 		isolateDir: isolateDir,
 		command:    command,
 		submission: submission,
+
 		isolateCommandBuilder: isolate.NewIsolateCommandBuilder().
 			WithProcesses(4).
 			WithWallTime(submission.TimeLimit + 4).
@@ -47,13 +49,20 @@ func (e *TestCaseExecutor) Execute(testcase *model.TestCase) *model.SubmissionRe
 
 	boxId := snowflakeid.NewInt()%999 + 1
 	if err := e.setupEnvironment(testcase, boxId); err != nil {
-		return e.handleError(err, boxId)
+		e.logger.Error("Init box failed",
+			zap.Int("boxId", boxId),
+			zap.Error(err))
+
+		return e.handleError(err, boxId, testcase.ID)
 	}
 	defer e.cleanup(boxId, testcase)
 
 	execResult, err := e.runIsolatedCommand(testcase, boxId)
 	if err != nil {
-		return e.handleError(err, boxId)
+		e.logger.Error("Run isolated command failed",
+			zap.Int("boxId", boxId),
+			zap.Error(err))
+		return e.handleError(err, boxId, testcase.ID)
 	}
 
 	return e.processExecutionResult(execResult, testcase, e.submission.Settings)
@@ -62,11 +71,16 @@ func (e *TestCaseExecutor) Execute(testcase *model.TestCase) *model.SubmissionRe
 func (e *TestCaseExecutor) setupEnvironment(testcase *model.TestCase, boxId int) error {
 	inputFilename := e.isolateDir + "/" + testcase.GetInputFileName()
 	commandShFile := e.isolateDir + "/" + snowflakeid.NewString() + ".sh"
+	expectedOutputFilename := e.isolateDir + "/" + testcase.GetExpectOutputFileName()
+	e.shFile = &commandShFile
 
 	if err := os.WriteFile(inputFilename, []byte(*testcase.Input), 0644); err != nil {
 		return err
 	}
 	if err := os.WriteFile(commandShFile, []byte(e.command), 0644); err != nil {
+		return err
+	}
+	if err := os.WriteFile(expectedOutputFilename, []byte(*testcase.ExpectOutput), 0644); err != nil {
 		return err
 	}
 
@@ -85,7 +99,7 @@ func (e *TestCaseExecutor) runIsolatedCommand(testcase *model.TestCase, boxId in
 	outputFilename := testcase.GetExpectOutputFileName()
 	metaOutFilename := e.isolateDir + "/" + testcase.GetExpectOutputFileName() + ".meta"
 	inputFilename := e.isolateDir + "/" + testcase.GetInputFileName()
-	commandShFile := e.isolateDir + "/" + snowflakeid.NewString() + ".sh"
+	commandShFile := *e.shFile
 
 	args := e.isolateCommandBuilder.Clone().
 		WithBoxID(boxId).
@@ -173,15 +187,13 @@ func (e *TestCaseExecutor) readOutput(filename string) (string, error) {
 	return string(b), nil
 }
 
-func (e *TestCaseExecutor) handleError(err error, boxId int) *model.SubmissionResult {
-	e.logger.Error("Execution error",
-		zap.Int("boxId", boxId),
-		zap.Error(err))
+func (e *TestCaseExecutor) handleError(err error, boxId int, testcaseId *string) *model.SubmissionResult {
 
 	errStr := err.Error()
 	return &model.SubmissionResult{
 		SubmissionID: e.submission.ID,
 		Status:       &StatusRuntimeError,
 		Stdout:       &errStr,
+		TestCaseID:   testcaseId,
 	}
 }
