@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/Mirai3103/remote-compiler/internal/model"
 	"github.com/Mirai3103/remote-compiler/pkg/isolate"
+
 	snowflakeid "github.com/Mirai3103/remote-compiler/pkg/snowflake_id"
 	"go.uber.org/zap"
 )
@@ -20,6 +22,7 @@ type TestCaseExecutor struct {
 	command               string
 	submission            *model.Submission
 	shFile                *string
+	boxId                 int
 }
 
 func NewTestCaseExecutor(logger *zap.Logger, isolateDir string, command string, submission *model.Submission) *TestCaseExecutor {
@@ -48,6 +51,7 @@ func NewTestCaseExecutor(logger *zap.Logger, isolateDir string, command string, 
 func (e *TestCaseExecutor) Execute(testcase *model.TestCase) *model.SubmissionResult {
 
 	boxId := snowflakeid.NewInt()%999 + 1
+	e.boxId = boxId
 	if err := e.setupEnvironment(testcase, boxId); err != nil {
 		e.logger.Error("Init box failed",
 			zap.Int("boxId", boxId),
@@ -71,16 +75,12 @@ func (e *TestCaseExecutor) Execute(testcase *model.TestCase) *model.SubmissionRe
 func (e *TestCaseExecutor) setupEnvironment(testcase *model.TestCase, boxId int) error {
 	inputFilename := e.isolateDir + "/" + testcase.GetInputFileName()
 	commandShFile := e.isolateDir + "/" + snowflakeid.NewString() + ".sh"
-	expectedOutputFilename := e.isolateDir + "/" + testcase.GetExpectOutputFileName()
 	e.shFile = &commandShFile
 
 	if err := os.WriteFile(inputFilename, []byte(*testcase.Input), 0644); err != nil {
 		return err
 	}
 	if err := os.WriteFile(commandShFile, []byte(e.command), 0644); err != nil {
-		return err
-	}
-	if err := os.WriteFile(expectedOutputFilename, []byte(*testcase.ExpectOutput), 0644); err != nil {
 		return err
 	}
 
@@ -108,7 +108,8 @@ func (e *TestCaseExecutor) runIsolatedCommand(testcase *model.TestCase, boxId in
 		WithMetaFile(metaOutFilename).
 		WithRunCommands("/bin/bash", commandShFile).
 		Build()
-
+	strCmd := strings.Join(args, " ")
+	e.logger.Info("Run isolated command", zap.String("command", strCmd))
 	execCmd := exec.Command(args[0], args[1:]...)
 	execCmd.Dir = e.isolateDir
 	execCmd.Stderr = os.Stderr
@@ -117,12 +118,12 @@ func (e *TestCaseExecutor) runIsolatedCommand(testcase *model.TestCase, boxId in
 		output, err1 := e.readOutput(testcase.GetExpectOutputFileName())
 		if err1 == nil {
 			e.logger.Error("Run isolated command failed with output", zap.String("output", output))
+			return nil, fmt.Errorf("%s", output)
 		}
 		var metaResult *isolate.MetaResult
-		if metaResult, err1 = isolate.NewMetaResultFromFile(metaOutFilename); err1 != nil {
-			return nil, err1
+		if metaResult, err1 = isolate.NewMetaResultFromFile(metaOutFilename); err1 == nil {
+			e.logger.Error("Run isolated command failed with meta", zap.Any("metaResult", metaResult))
 		}
-		e.logger.Error("Run isolated command failed with meta", zap.Any("metaResult", metaResult))
 
 		return nil, err
 	}
@@ -170,10 +171,12 @@ func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult
 		output = strings.ToLower(output)
 		*testcase.ExpectOutput = strings.ToLower(*testcase.ExpectOutput)
 	}
+
 	if !settings.WithWhitespace {
 		output = strings.ReplaceAll(output, " ", "")
 		*testcase.ExpectOutput = strings.ReplaceAll(*testcase.ExpectOutput, " ", "")
 	}
+	e.logger.Info("compare output", zap.String("output", output), zap.String("expectOutput", *testcase.ExpectOutput))
 	if output != *testcase.ExpectOutput {
 		result.Status = &StatusWrongAnswer
 		result.Stdout = &output
@@ -186,7 +189,7 @@ func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult
 }
 
 func (e *TestCaseExecutor) readOutput(filename string) (string, error) {
-	file, err := os.Open(e.isolateDir + "/" + filename)
+	file, err := os.Open("/var/local/lib/isolate/" + fmt.Sprint(e.boxId) + "/box/" + filename)
 	if err != nil {
 		return "", err
 	}
