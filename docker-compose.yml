@@ -13,5 +13,6 @@ services:
       - "50051:50051"
     environment:
       - GOPATH=/build
+      - ENV=development
     volumes:
       - ./config.json:/config.json
