@@ -56,7 +56,7 @@ func LoadConfig(filename string) (*Config, error) {
 	v.SetDefault("executor.strategy", defaultConfig.Executor.Strategy)
 	v.SetDefault("executor.isolateDir", defaultConfig.Executor.IsolateDir)
 	v.SetDefault("executor.maxCompileConcurrent", 10)
-	v.SetDefault("executor.maxExecuteConcurrent", 10)
+	v.SetDefault("executor.maxExecuteConcurrent", 15)
 	err := v.ReadInConfig()
 	if err != nil {
 		var configFileNotFoundError viper.ConfigFileNotFoundError

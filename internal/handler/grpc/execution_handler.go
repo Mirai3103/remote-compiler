@@ -2,8 +2,8 @@ package grpc
 
 import (
 	"context"
+
 	"go.uber.org/zap"
-	"sync"
 
 	"github.com/Mirai3103/remote-compiler/internal/executor"
 	"github.com/Mirai3103/remote-compiler/internal/model"
@@ -16,16 +16,15 @@ import (
 type ExecutionHandler struct {
 	proto.UnimplementedExecutionServiceServer
 	cfx              *config.Config
-	compileSemaphore *semaphore.Weighted // Semaphore để giới hạn số lượng biên dịch
-	executeSemaphore *semaphore.Weighted // Semaphore để giới hạn số lượng thực thi
-	mu               sync.Mutex          // Mutex để bảo vệ truy cập vào semaphores
+	compileSemaphore *semaphore.Weighted
+	executeSemaphore *semaphore.Weighted
 }
 
 func NewExecutionHandler(cfx *config.Config) *ExecutionHandler {
 	return &ExecutionHandler{
 		cfx:              cfx,
-		compileSemaphore: semaphore.NewWeighted(10), // Giới hạn 10 hoạt động biên dịch đồng thời
-		executeSemaphore: semaphore.NewWeighted(15), // Giới hạn 15 hoạt động thực thi đồng thời
+		compileSemaphore: semaphore.NewWeighted(int64(cfx.Executor.MaxCompileConcurrent)),
+		executeSemaphore: semaphore.NewWeighted(int64(cfx.Executor.MaxExecuteConcurrent)),
 	}
 }
 
