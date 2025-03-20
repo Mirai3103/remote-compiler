@@ -34,15 +34,15 @@ func NewTestCaseExecutor(logger *zap.Logger, isolateDir string, command string, 
 
 		isolateCommandBuilder: isolate.NewIsolateCommandBuilder().
 			WithProcesses(4).
-			WithWallTime(submission.TimeLimit + 4).
+			WithWallTime(submission.TimeLimitInMs + 4).
 			WithMaxFileSize(5120).
 			AddDir("/etc:noexec").
 			AddDir(isolateDir).
 			WithCGroup().
-			WithTime(submission.TimeLimit).
-			WithExtraTime(submission.TimeLimit).
-			WithCGroupMemory(submission.MemoryLimit).
-			WithStackSize(submission.MemoryLimit).
+			WithTime(submission.TimeLimitInMs).
+			WithExtraTime(submission.TimeLimitInMs).
+			WithCGroupMemory(submission.MemoryLimitInKb).
+			WithStackSize(submission.MemoryLimitInKb).
 			AddEnv("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin").
 			WithStderrToStdout(),
 	}
@@ -133,10 +133,10 @@ func (e *TestCaseExecutor) runIsolatedCommand(testcase *model.TestCase, boxId in
 
 func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult, testcase *model.TestCase, settings *model.SubmissionSettings) *model.SubmissionResult {
 	result := &model.SubmissionResult{
-		SubmissionID: e.submission.ID,
-		TestCaseID:   testcase.ID,
-		MemoryUsage:  metaResult.CGMem,
-		TimeUsage:    metaResult.TimeWall,
+		SubmissionID:    e.submission.ID,
+		TestCaseID:      testcase.ID,
+		MemoryUsageInKb: metaResult.CGMem,
+		TimeUsageInMs:   metaResult.TimeWall,
 	}
 
 	if metaResult.ExitCode != 0 {
@@ -145,12 +145,12 @@ func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult
 		return result
 	}
 
-	if metaResult.TimeWall > float64(e.submission.TimeLimit) {
+	if metaResult.TimeWall > float64(e.submission.TimeLimitInMs) {
 		result.Status = &StatusTimeLimitExceeded
 		return result
 	}
 
-	if metaResult.CGMem > float64(e.submission.MemoryLimit) {
+	if metaResult.CGMem > float64(e.submission.MemoryLimitInKb) {
 		result.Status = &StatusMemoryLimitExceeded
 		return result
 	}

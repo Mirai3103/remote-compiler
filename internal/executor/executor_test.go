@@ -29,10 +29,10 @@ func TestExecutor(t *testing.T) {
 			CompileCommand: ptr("g++ $SourceFileName -o $BinaryFileName"),
 			RunCommand:     ptr("$BinaryFileName"),
 		},
-		ID:          ptr("1"),
-		Code:        ptr("#include <iostream>\nint main() { std::cout << \"Hello, World!\"; return 0; }"),
-		TimeLimit:   1,
-		MemoryLimit: 32000,
+		ID:              ptr("1"),
+		Code:            ptr("#include <iostream>\nint main() { std::cout << \"Hello, World!\"; return 0; }"),
+		TimeLimitInMs:   1,
+		MemoryLimitInKb: 32000,
 		TestCases: []model.TestCase{
 			{
 				ID:           ptr("1"),
@@ -56,7 +56,7 @@ func TestExecutor(t *testing.T) {
 }
 
 func TestExecutor_SimpleAdd(t *testing.T) {
-	cfg, err := config.LoadConfig("/root/remote_compiler/config.yaml")
+	cfg, err := config.LoadConfig("D:/remote-compiler/config.yaml")
 	assert.NoError(t, err)
 
 	log := logger.GetLogger()
@@ -65,14 +65,14 @@ func TestExecutor_SimpleAdd(t *testing.T) {
 	submission := &model.Submission{
 		Language: &model.Language{
 			SourceFileExt:  ptr(".cpp"),
-			BinaryFileExt:  ptr(".out"),
+			BinaryFileExt:  ptr(".exe"),
 			CompileCommand: ptr("g++ $SourceFileName -o $BinaryFileName"),
 			RunCommand:     ptr("$BinaryFileName"),
 		},
-		ID:          ptr("1"),
-		Code:        ptr("#include <iostream>\nint main() { int a, b; std::cin >> a >> b; std::cout << a + b; return 0; }"),
-		TimeLimit:   1,
-		MemoryLimit: 32000,
+		ID:              ptr("1"),
+		Code:            ptr("#include <iostream>\nint main() { int a, b; std::cin >> a >> b; std::cout << a + b; return 0; }"),
+		TimeLimitInMs:   900,
+		MemoryLimitInKb: 32000,
 		TestCases: []model.TestCase{
 			{
 				ID:           ptr("1"),
@@ -103,6 +103,7 @@ func TestExecutor_SimpleAdd(t *testing.T) {
 	}
 
 	err = executor.Compile(submission)
+
 	assert.NoError(t, err)
 
 	ch := make(chan *model.SubmissionResult, len(submission.TestCases))
@@ -111,7 +112,7 @@ func TestExecutor_SimpleAdd(t *testing.T) {
 	var result *model.SubmissionResult
 	for r := range ch {
 		result = r
-		log.Info("result", zap.String("status", *result.Status), zap.Float64("time", result.TimeUsage), zap.Float64("memory", result.MemoryUsage))
+		log.Info("result", zap.String("status", *result.Status), zap.Float64("time", result.TimeUsageInMs), zap.Float64("memory", result.MemoryUsageInKb))
 
 		assert.Equal(t, "Success", *result.Status)
 	}
@@ -131,10 +132,10 @@ func TestExecutor_Fibonacci(t *testing.T) {
 			CompileCommand: nil,
 			RunCommand:     ptr("python3 $SourceFileName"),
 		},
-		ID:          ptr("1"),
-		Code:        ptr("print(\"Hello World!\")"),
-		TimeLimit:   1,
-		MemoryLimit: 32000,
+		ID:              ptr("1"),
+		Code:            ptr("print(\"Hello World!\")"),
+		TimeLimitInMs:   1,
+		MemoryLimitInKb: 32000,
 		TestCases: []model.TestCase{
 			{
 				ID:           ptr("1"),
@@ -153,7 +154,7 @@ func TestExecutor_Fibonacci(t *testing.T) {
 	var result *model.SubmissionResult
 	for r := range ch {
 		result = r
-		log.Info("result", zap.String("status", *result.Status), zap.Float64("time", result.TimeUsage), zap.Float64("memory", result.MemoryUsage), zap.String("stdout", *result.Stdout))
+		log.Info("result", zap.String("status", *result.Status), zap.Float64("time", result.TimeUsageInMs), zap.Float64("memory", result.MemoryUsageInKb), zap.String("stdout", *result.Stdout))
 		assert.Equal(t, "Success", *result.Status)
 	}
 

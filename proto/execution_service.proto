@@ -25,8 +25,8 @@ message SubmissionResult {
   string test_case_id = 2;
   string status = 3;
   string stdout = 4;
-  float memory_usage = 5;
-  float time_usage = 6;
+  float memory_usage_in_kb = 5;
+  float time_usage_in_ms = 6;
 }
 
 message TestCase {
@@ -41,8 +41,8 @@ message Submission {
   string id = 1;
   Language language = 2;
   string code = 3;
-  int32 time_limit = 4;
-  int32 memory_limit = 5;
+  int32 time_limit_in_ms = 4;
+  int32 memory_limit_in_kb = 5;
   repeated TestCase test_cases = 6;
   SubmissionSettings settings = 7;
 }
