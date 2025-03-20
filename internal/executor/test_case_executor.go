@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing/iotest"
 
 	"github.com/Mirai3103/remote-compiler/internal/model"
@@ -14,6 +15,8 @@ import (
 	snowflakeid "github.com/Mirai3103/remote-compiler/pkg/snowflake_id"
 	"go.uber.org/zap"
 )
+
+var initBoxMutex = &sync.Mutex{}
 
 type TestCaseExecutor struct {
 	logger                *zap.Logger
@@ -34,13 +37,13 @@ func NewTestCaseExecutor(logger *zap.Logger, isolateDir string, command string, 
 
 		isolateCommandBuilder: isolate.NewIsolateCommandBuilder().
 			WithProcesses(4).
-			WithWallTime(submission.TimeLimitInMs + 4).
+			WithWallTime((submission.TimeLimitInMs / 1000) + 4).
 			WithMaxFileSize(5120).
 			AddDir("/etc:noexec").
 			AddDir(isolateDir).
 			WithCGroup().
-			WithTime(submission.TimeLimitInMs).
-			WithExtraTime(submission.TimeLimitInMs).
+			WithTime(submission.TimeLimitInMs / 1000).
+			WithExtraTime(submission.TimeLimitInMs / 1000).
 			WithCGroupMemory(submission.MemoryLimitInKb).
 			WithStackSize(submission.MemoryLimitInKb).
 			AddEnv("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin").
@@ -52,13 +55,17 @@ func (e *TestCaseExecutor) Execute(testcase *model.TestCase) *model.SubmissionRe
 
 	boxId := snowflakeid.NewInt()%999 + 1
 	e.boxId = boxId
+	initBoxMutex.Lock()
+
 	if err := e.setupEnvironment(testcase, boxId); err != nil {
+		initBoxMutex.Unlock()
 		e.logger.Error("Init box failed",
 			zap.Int("boxId", boxId),
 			zap.Error(err))
 
 		return e.handleError(err, boxId, testcase.ID)
 	}
+	initBoxMutex.Unlock()
 	defer e.cleanup(boxId, testcase)
 
 	execResult, err := e.runIsolatedCommand(testcase, boxId)
@@ -163,21 +170,8 @@ func (e *TestCaseExecutor) processExecutionResult(metaResult *isolate.MetaResult
 		return result
 	}
 
-	if settings.WithTrim {
-		output = strings.TrimSpace(output)
-		*testcase.ExpectOutput = strings.TrimSpace(*testcase.ExpectOutput)
-	}
-	if settings.WithCaseSensitive {
-		output = strings.ToLower(output)
-		*testcase.ExpectOutput = strings.ToLower(*testcase.ExpectOutput)
-	}
-
-	if !settings.WithWhitespace {
-		output = strings.ReplaceAll(output, " ", "")
-		*testcase.ExpectOutput = strings.ReplaceAll(*testcase.ExpectOutput, " ", "")
-	}
 	e.logger.Info("compare output", zap.String("output", output), zap.String("expectOutput", *testcase.ExpectOutput))
-	if output != *testcase.ExpectOutput {
+	if !compare(output, *testcase.ExpectOutput, settings) {
 		result.Status = &StatusWrongAnswer
 		result.Stdout = &output
 		return result

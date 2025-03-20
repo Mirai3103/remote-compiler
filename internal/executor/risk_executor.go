@@ -55,7 +55,7 @@ func (r *riskExecutor) runCompileCommand(command string) error {
 // Execute implements Executor.
 // Execute implements Executor.
 func (r *riskExecutor) Execute(submission *model.Submission, ch chan<- *model.SubmissionResult) error {
-	// defer r.cleanupFiles(submission)
+	defer r.cleanupFiles(submission)
 	command := r.buildCommand(submission)
 	var wg sync.WaitGroup
 	osName := runtime.GOOS
@@ -236,7 +236,7 @@ func (r *riskExecutor) Execute(submission *model.Submission, ch chan<- *model.Su
 			// Process output
 			outputStr := outBuf.String()
 			result.Stdout = &outputStr
-			if outputStr == *tc.ExpectOutput {
+			if compare(outputStr, *testcase.ExpectOutput, submission.Settings) {
 				result.Status = &StatusSuccess
 			} else {
 				result.Status = &StatusWrongAnswer

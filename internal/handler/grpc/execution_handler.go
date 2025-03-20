@@ -32,6 +32,7 @@ func NewExecutionHandler(cfx *config.Config) *ExecutionHandler {
 func (h *ExecutionHandler) Execute(req *proto.Submission, stream proto.ExecutionService_ExecuteServer) error {
 	log := logger.GetLogger()
 	log.Info("Received a submission")
+	log.Info("time limit", zap.Int32("time_limit", req.TimeLimitInMs), zap.Int32("memory_limit", req.MemoryLimitInKb))
 
 	submission := &model.Submission{
 		ID:              &req.Id,

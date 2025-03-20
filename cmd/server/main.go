@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	cfg, err := config.LoadConfig("config.yaml")
+	cfg, err := config.LoadConfig("config.json")
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}

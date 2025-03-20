@@ -6,10 +6,12 @@ services:
   app:
     build:
       context: .
-      dockerfile: dockerfile.dev
+      dockerfile: dockerfile
     privileged: true
     ports:
       - "8080:8080"
       - "50051:50051"
     environment:
       - GOPATH=/build
+    volumes:
+      - ./config.json:/config.json

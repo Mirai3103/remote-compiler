@@ -20,7 +20,8 @@ ENV PATH=$PATH:/usr/local/go/bin:/build/bin:/usr/local/bin \
 WORKDIR /build
 COPY . .
 RUN go build -o /usr/local/bin/app.out cmd/server/main.go
-RUN mkdir /isolateBox 
+RUN mkdir /isolateBox
+RUN mkdir ./temp
 
 EXPOSE 8080
 EXPOSE 50051

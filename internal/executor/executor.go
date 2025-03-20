@@ -50,3 +50,21 @@ func (e *baseExecutor) buildCommand(submission *model.Submission) string {
 	command = strings.ReplaceAll(command, "$BinaryFileName", e.cfg.IsolateDir+"/"+submission.Language.GetBinaryFileName())
 	return strings.ReplaceAll(command, "$SourceFileName", e.cfg.IsolateDir+"/"+submission.Language.GetSourceFileName())
 }
+
+func compare(actual, expect string, settings *model.SubmissionSettings) bool {
+	if settings.WithTrim {
+		actual = strings.TrimSpace(actual)
+		expect = strings.TrimSpace(expect)
+	}
+	if settings.WithCaseSensitive {
+		actual = strings.ToLower(actual)
+		expect = strings.ToLower(expect)
+	}
+
+	if !settings.WithWhitespace {
+		actual = strings.ReplaceAll(actual, " ", "")
+		expect = strings.ReplaceAll(expect, " ", "")
+	}
+
+	return actual == expect
+}
