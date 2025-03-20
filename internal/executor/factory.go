@@ -12,6 +12,9 @@ var (
 
 func NewExecutor(logger *zap.Logger, cfg config.ExecutorConfig) Executor {
 	strategy := cfg.Strategy
+	if strategy == RiskStrategy {
+		logger.Warn("Using risk executor - this is not recommended for production environments")
+	}
 	switch strategy {
 	case IsolateStrategy:
 		return newIsolateExecutor(logger, cfg)

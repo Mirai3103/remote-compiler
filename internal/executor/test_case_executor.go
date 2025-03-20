@@ -53,7 +53,11 @@ func NewTestCaseExecutor(logger *zap.Logger, isolateDir string, command string, 
 
 func (e *TestCaseExecutor) Execute(testcase *model.TestCase) *model.SubmissionResult {
 
-	boxId := snowflakeid.NewInt()%999 + 1
+	boxId := boxIDManager.Acquire()
+	defer boxIDManager.Release(boxId)
+	if boxId == -1 {
+		return e.handleError(fmt.Errorf("no available box id"), boxId, testcase.ID)
+	}
 	e.boxId = boxId
 	initBoxMutex.Lock()
 

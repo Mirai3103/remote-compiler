@@ -52,6 +52,9 @@ func (e *baseExecutor) buildCommand(submission *model.Submission) string {
 }
 
 func compare(actual, expect string, settings *model.SubmissionSettings) bool {
+	if settings == nil {
+		return actual == expect
+	}
 	if settings.WithTrim {
 		actual = strings.TrimSpace(actual)
 		expect = strings.TrimSpace(expect)

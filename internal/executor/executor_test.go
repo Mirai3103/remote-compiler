@@ -56,7 +56,7 @@ func TestExecutor(t *testing.T) {
 }
 
 func TestExecutor_SimpleAdd(t *testing.T) {
-	cfg, err := config.LoadConfig("D:/remote-compiler/config.yaml")
+	cfg, err := config.LoadConfig("config.json")
 	assert.NoError(t, err)
 
 	log := logger.GetLogger()

@@ -163,6 +163,7 @@ func (r *riskExecutor) Execute(submission *model.Submission, ch chan<- *model.Su
 							}
 						}
 					}
+					time.Sleep(10 * time.Millisecond)
 				}
 			}()
 
